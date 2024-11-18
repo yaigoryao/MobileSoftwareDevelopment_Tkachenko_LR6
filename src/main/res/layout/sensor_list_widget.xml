@@ -1,0 +1,19 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.Lab4.AppWidget.Container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:theme="@style/Theme.Lab4.AppWidgetContainer"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/sensor_lv_label_tv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:text="@string/lv_label_text"
+        android:textSize="24sp"/>
+    <ListView
+        android:id="@+id/sensors_lv"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+</LinearLayout>

@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">lr6</string>
+    <string name="appwidget_text">EXAMPLE</string>
+    <string name="add_widget">Add widget</string>
+    <string name="app_widget_description">This is an app widget description</string>
+
+    <string name="lv_label_text">Список доступных сенсоров (нажмите сюда для обновления)</string>
+</resources>
