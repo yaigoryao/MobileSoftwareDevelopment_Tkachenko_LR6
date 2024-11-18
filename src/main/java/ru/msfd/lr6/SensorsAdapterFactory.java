@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -40,22 +41,19 @@ public class SensorsAdapterFactory implements RemoteViewsService.RemoteViewsFact
     final ArrayList<SensorModel> sensorModels  = new ArrayList<>();;
     public SensorsAdapterFactory(Context context, Intent intent)
     {
-        Log.d("SensorsAdapterFactory", "public SensorsAdapterFactory(Context context, Intent intent)");
-
         this.context = context;
         this.intent = intent;
     }
 
     @Override
-    public void onCreate() { Log.d("SensorsAdapterFactory", "public void onCreate()"); }
+    public void onCreate() { }
 
-    private boolean isUpdating = false;
+    private static boolean isUpdating = false;
 
     @Override
     public void onDataSetChanged()
     {
         Log.d("SensorsAdapterFactory", "public void onDataSetChanged()");
-
         if (isUpdating) return;
         isUpdating = true;
         synchronized (sensorModels)
@@ -75,10 +73,25 @@ public class SensorsAdapterFactory implements RemoteViewsService.RemoteViewsFact
             {
                 synchronized (sensorModels)
                 {
-                    String value = getSensorValues(event.values);
+                    if (event.values != null || event.values.length > 0)
+                    {
+                        String value = getSensorValues(event.values);
+                        for (SensorModel model : sensorModels)
+                        {
+                            if (model.name.equals(event.sensor.getName()))
+                            {
+                                model.value = value;
+                                if(event.sensor.getName() == "ACCELEROMETER")
+                                {
+                                    Log.d("ACCELEROMETER", model.value);
+                                }
+                                //Handler uiHandler = new Handler(Looper.getMainLooper());
+                                //uiHandler.post(() -> model.value = value);
+                            }
+                        }
+                    }
 
-                    for (SensorModel model : sensorModels)
-                        if (model.name.equals(event.sensor.getName())) model.value = value;
+
                 }
             }
         };
@@ -96,33 +109,22 @@ public class SensorsAdapterFactory implements RemoteViewsService.RemoteViewsFact
         Handler handler = new Handler(Looper.getMainLooper());
         handler.postDelayed(() ->
         {
-            Log.d("SensorsAdapterFactory", "Handler delayed task executed, updating widget");
-
             sensorManager.unregisterListener(listener);
-            synchronized (sensorModels)
-            {
-                for (SensorModel model : sensorModels) Log.d("MYLOG", model.name + " / " + model.value);
-            }
             isUpdating = false;
-            Log.d("SensorsAdapterFactory", "Updating finished");
-        }, 500);
-
-        SharedPreferences sp = context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sp.edit();
-        synchronized (sensorModels)
-        {
-            for(SensorModel model : sensorModels)
-            {
-                String stringId = String.valueOf(model.id);
-                int value = sp.getInt(stringId, -1);
-                if(value == -1) editor.putInt(stringId, 0);
-                else model.showValue = value != 0;
-            }
-            editor.commit();
-        }
+        }, UPDATE_TIME_MS);
     }
 
-    private String getSensorValues(float[] values) { return Arrays.toString(values); }
+    private static final int UPDATE_TIME_MS = 150;
+
+    private static String getSensorValues(float[] values)
+    {
+        if (values == null || values.length == 0) return "";
+        StringBuilder sb = new StringBuilder();
+        for (float value : values) {
+            sb.append(String.format(Locale.US, "%.2f", value)).append(" ");
+        }
+        return sb.toString().trim();
+    }
 
     @Override
     public void onDestroy() { }
@@ -134,11 +136,14 @@ public class SensorsAdapterFactory implements RemoteViewsService.RemoteViewsFact
     public RemoteViews getViewAt(int i)
     {
         Log.d("SensorsAdapterFactory", "public RemoteViews getViewAt(int i)");
+        Log.d("getViewAt", "Sensor: " + sensorModels.get(i).name + " / Value: " + sensorModels.get(i).value);
+        try { Thread.sleep(UPDATE_TIME_MS); }
+        catch (InterruptedException e) { e.printStackTrace(); }
+        SharedPreferences sp = context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE);
+        String stringId = String.valueOf(sensorModels.get(i).id);
+        int value = sp.getInt(stringId, -1);
         RemoteViews rv = new RemoteViews(context.getPackageName(), R.layout.sensor_item_layout);
-        synchronized (sensorModels)
-        {
-            rv.setTextViewText(R.id.sensor_data_tv_id, sensorModels.get(i).toString());
-        }
+        rv.setTextViewText(R.id.sensor_data_tv_id, sensorModels.get(i).name + (value < 1 ? "" : " / " + sensorModels.get(i).value));
         rv.setOnClickFillInIntent(R.id.sensor_data_tv_id, new Intent().putExtra(SensorListWidget.ITEM_POSITION, i));
         return rv;
     }
@@ -154,5 +159,22 @@ public class SensorsAdapterFactory implements RemoteViewsService.RemoteViewsFact
 
     @Override
     public boolean hasStableIds() { return true; }
-
 }
+
+//            synchronized (sensorModels)
+//            {
+//                for (SensorModel model : sensorModels) Log.d("MYLOG", model.name + " / " + model.value);
+//            }
+//        SharedPreferences sp = context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE);
+//        SharedPreferences.Editor editor = sp.edit();
+//        synchronized (sensorModels)
+//        {
+//            for(SensorModel model : sensorModels)
+//            {
+//                String stringId = String.valueOf(model.id);
+//                int value = sp.getInt(stringId, -1);
+//                if(value == -1) editor.putInt(stringId, 0);
+//                else model.showValue = value != 0;
+//            }
+//            editor.commit();
+//        }
